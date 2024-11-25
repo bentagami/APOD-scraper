@@ -2,11 +2,11 @@ import requests
 from bs4 import BeautifulSoup
 import os
 import re
+import yt_dlp
 
-URL = "https://apod.nasa.gov/apod"
+URL = "https://apod.nasa.gov/apod/"
 page = requests.get(URL)
 soup = BeautifulSoup(page.content, "html.parser")
-
 
 def fetch_explanation():
     # Locate the "Explanation:" <b> tag, checking for different structures
@@ -59,15 +59,15 @@ def fetch_title_credit():
 def fetch_img():
     image_tag = soup.find("img")
     if image_tag:
-        image_url = "https://apod.nasa.gov/" + image_tag['src']  # Complete the image URL
-
+        image_url = "https://apod.nasa.gov/apod/" + image_tag['src']  # Complete the image URL
+        print(f"Image URL: {image_url}")
         # Download the image
         response = requests.get(image_url)
         if response.status_code == 200:
             # Create a directory to save images if it doesn't exist
-            os.makedirs("images", exist_ok=True)
+            os.makedirs("/media", exist_ok=True)
             image_name = "apod.jpg"  # Set the image name to "apod.jpg"
-            image_path = os.path.join("images", image_name)  # Specify the path where to save the image
+            image_path = os.path.join("/media", image_name)  # Specify the path where to save the image
 
             with open(image_path, 'wb') as file:
                 file.write(response.content)
@@ -79,3 +79,39 @@ def fetch_img():
     else:
         print("Image not found.")
         return None
+
+
+def get_video_url():
+    try:
+        iframe_tag = soup.find('iframe')
+
+        if iframe_tag:
+            # Extract the src attribute from the iframe tag
+            video_url = iframe_tag['src']
+            return video_url
+        else:
+            print("No video iframe found.")
+            return None
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
+
+def fetch_video(video_url, output_path="/media/apod_video.mp4"):
+    try:
+        # Set up yt-dlp options for downloading
+        ydl_opts = {
+            'outtmpl': output_path,  # Define the output file name
+            'format': 'best',        # Download the best quality video
+        }
+
+        # Create an yt-dlp instance and download the video
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([video_url])
+
+        print(f"Video successfully downloaded to {output_path}")
+        return output_path  # Return the path of the downloaded video
+    except Exception as e:
+        print(f"An error occurred while downloading the video: {e}")
+        return None  # Return None if an error occurs
